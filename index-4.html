@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BRIDGE FULFILLMENT — Распределитель по коробам</title>
+<meta name="theme-color" content="#14171c">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+  :root{
+    --bg:#14171c;
+    --bg-elev:#1b1f26;
+    --bg-elev2:#212630;
+    --bg-elev3:#282e39;
+    --border:#2a2f39;
+    --border-soft:#232833;
+    --text:#e9e7e2;
+    --text-dim:#8b8f99;
+    --text-faint:#5e6470;
+    --amber:#f5a623;
+    --amber-dim:#c4841a;
+    --amber-soft:#3a2f1c;
+    --amber-glow:rgba(245,166,35,0.35);
+    --danger:#e5595e;
+    --danger-soft:#3a2224;
+    --success:#4caf7d;
+    --success-soft:#1e2f26;
+    --mixed:#3a3420;
+    --over:#402420;
+    --radius:10px;
+    --ease:cubic-bezier(.22,.9,.32,1);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(245,166,35,0.05), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Sans', system-ui, sans-serif;
+    padding-bottom:100px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  h1,h2,h3,.display{
+    font-family:'Bebas Neue', sans-serif;
+    letter-spacing:0.03em;
+    font-weight:400;
+    margin:0;
+  }
+  .mono{font-family:'IBM Plex Mono', monospace;}
+
+  /* ---- header: stenciled crate-stamp identity ---- */
+  header{
+    padding:20px 18px 14px;
+    position:sticky; top:0; z-index:20;
+    background:rgba(18,21,26,0.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--border);
+    transition:box-shadow .3s var(--ease), border-color .3s var(--ease);
+  }
+  header.scrolled{
+    box-shadow:0 8px 24px -12px rgba(0,0,0,0.55);
+    border-bottom-color:var(--amber-dim);
+  }
+  header .brand-row{display:flex;align-items:center;gap:10px;}
+  header .crate-mark{
+    width:34px;height:34px;flex:0 0 auto;border-radius:6px;
+    background:var(--amber-soft);border:1px solid var(--amber-dim);
+    display:flex;align-items:center;justify-content:center;font-size:17px;
+  }
+  header h1{font-size:23px;color:var(--amber);line-height:1;}
+  header .sub{margin:5px 0 0;color:var(--text);font-size:13px;font-weight:600;letter-spacing:0.02em;}
+  header p{margin:2px 0 0;color:var(--text-dim);font-size:11.5px;}
+  header .stripe{
+    height:3px;margin-top:14px;border-radius:3px;
+    background:repeating-linear-gradient(-45deg,var(--amber) 0 8px, transparent 8px 16px);
+    opacity:0.55;
+  }
+
+  main{max-width:720px;margin:0 auto;padding:16px;}
+
+  /* ---- entrance stagger ---- */
+  @keyframes riseIn{
+    from{ opacity:0; transform:translateY(10px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .card{
+    background:var(--bg-elev);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+    animation:riseIn .5s var(--ease) both;
+  }
+  main .card:nth-of-type(1){animation-delay:.02s;}
+  main .card:nth-of-type(2){animation-delay:.08s;}
+  main .card:nth-of-type(3){animation-delay:.14s;}
+  main .card:nth-of-type(4){animation-delay:.2s;}
+
+  .card h2{
+    font-size:19px;color:var(--text);margin-bottom:12px;letter-spacing:0.04em;
+    display:flex;align-items:center;gap:8px;
+  }
+  .card h2 .n{
+    color:#1a1400;background:var(--amber);font-family:'IBM Plex Mono',monospace;
+    font-size:11px;font-weight:600;letter-spacing:0;border-radius:5px;
+    padding:2px 6px;line-height:1.5;
+  }
+  label{
+    display:block;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--text-dim);margin-bottom:4px;margin-top:10px;
+  }
+  label:first-child{margin-top:0;}
+  input,select{
+    width:100%;background:var(--bg-elev2);border:1px solid var(--border);
+    color:var(--text);padding:10px 11px;border-radius:7px;font-size:15px;
+    font-family:'IBM Plex Mono', monospace;
+    transition:border-color .15s var(--ease), box-shadow .15s var(--ease);
+  }
+  input:focus,select:focus{outline:none;border-color:var(--amber-dim);box-shadow:0 0 0 3px var(--amber-glow);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+
+  button{
+    font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:14px;
+    border:none;border-radius:7px;padding:12px 16px;cursor:pointer;
+    transition:transform .08s ease, opacity .15s ease, box-shadow .2s var(--ease), background .15s ease;
+  }
+  button:active{transform:scale(0.96);}
+  .btn-primary{
+    background:var(--amber);color:#1a1400;width:100%;margin-top:14px;
+    box-shadow:0 4px 14px -4px var(--amber-glow);
+  }
+  .btn-primary:hover{box-shadow:0 6px 20px -4px var(--amber-glow);}
+  .btn-secondary{background:var(--bg-elev2);color:var(--text);border:1px solid var(--border);}
+  .btn-secondary:hover{border-color:var(--amber-dim);color:var(--amber);}
+  .btn-danger{background:transparent;color:var(--danger);border:1px solid var(--danger);}
+  .btn-danger:hover{background:var(--danger-soft);}
+  .btn-ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border);}
+  .btn-ghost:hover{color:var(--amber);border-color:var(--amber-dim);}
+  .btn-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+  .btn-row button{flex:1;min-width:140px;}
+
+  /* ---- table: sticky header + scroll for large lists ---- */
+  .table-scroll{max-height:420px;overflow-y:auto;border-radius:8px;position:relative;}
+  .table-scroll::-webkit-scrollbar{width:7px;}
+  .table-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:6px;}
+  .table-scroll::-webkit-scrollbar-thumb:hover{background:var(--amber-dim);}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{position:sticky;top:0;background:var(--bg-elev);z-index:2;}
+  th{
+    text-align:left;font-family:'IBM Plex Mono',monospace;font-weight:600;
+    color:var(--text-dim);font-size:11px;text-transform:uppercase;letter-spacing:0.05em;
+    padding:8px 6px;border-bottom:1px solid var(--border);
+  }
+  th.sortable{cursor:pointer;user-select:none;transition:color .15s ease;}
+  th.sortable:hover{color:var(--text);}
+  th .arrow{color:var(--amber);margin-left:3px;}
+  td{padding:8px 6px;border-bottom:1px solid var(--border-soft);font-family:'IBM Plex Mono',monospace;}
+  tbody tr{transition:background .12s ease;}
+  tbody tr:hover{background:var(--bg-elev2);}
+  tr:last-child td{border-bottom:none;}
+  .del-btn{background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;padding:2px 6px;transition:transform .1s ease;}
+  .del-btn:hover{transform:scale(1.15);}
+  .icon-btn{background:none;border:none;cursor:pointer;font-size:14px;padding:2px 5px;color:var(--text-dim);transition:color .15s ease, transform .1s ease;}
+  .icon-btn:hover{color:var(--amber);transform:scale(1.1);}
+  .row-actions{display:flex;gap:2px;white-space:nowrap;}
+  .edit-input{width:100%;padding:5px 6px;font-size:12px;background:var(--bg-elev2);border:1px solid var(--amber-dim);color:var(--text);border-radius:5px;font-family:'IBM Plex Mono',monospace;}
+  .empty{color:var(--text-dim);font-size:13px;text-align:center;padding:26px 0;}
+  .empty .empty-icon{font-size:26px;display:block;margin-bottom:8px;opacity:.5;animation:floatY 3s ease-in-out infinite;}
+  @keyframes floatY{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-5px);} }
+
+  details summary{cursor:pointer;color:var(--text-dim);font-size:13px;padding:6px 0;user-select:none;list-style:none;position:relative;padding-left:16px;}
+  details summary::-webkit-details-marker{display:none;}
+  details summary::before{
+    content:'▸';position:absolute;left:0;color:var(--amber-dim);
+    transition:transform .2s var(--ease);
+  }
+  details[open] summary::before{transform:rotate(90deg);}
+  details summary:hover{color:var(--text);}
+
+  .chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+  .chip{
+    background:var(--bg-elev2);border:1px solid var(--border);border-radius:20px;
+    padding:6px 12px;font-size:13px;display:flex;align-items:center;gap:6px;
+    transition:border-color .15s ease;
+  }
+  .chip:hover{border-color:var(--amber-dim);}
+  .chip button{background:none;border:none;color:var(--text-dim);padding:0;font-size:14px;cursor:pointer;}
+  .small-size-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+  .size-toggle{
+    background:var(--bg-elev2);border:1px solid var(--border);border-radius:6px;
+    padding:6px 10px;font-size:13px;cursor:pointer;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;
+    transition:all .15s var(--ease);
+  }
+  .size-toggle.active{background:var(--amber-soft);border-color:var(--amber-dim);color:var(--amber);}
+  .size-toggle:active{transform:scale(0.95);}
+
+  .city-block{margin-bottom:20px;animation:riseIn .4s var(--ease) both;}
+  .city-block h3{font-size:19px;color:var(--amber);display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px;padding-bottom:6px;border-bottom:1px dashed var(--border);margin-bottom:4px;}
+  .city-block .city-stats{font-size:12px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;font-weight:400;letter-spacing:0;}
+  .box-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-top:8px;}
+
+  /* ---- box-card: shipping-manifest ticket ---- */
+  .box-card{
+    background:var(--bg-elev2);border:1px solid var(--border);border-radius:8px;
+    padding:10px 12px;position:relative;overflow:hidden;
+    animation:riseIn .35s var(--ease) both;
+    transition:border-color .2s ease, transform .15s ease;
+  }
+  .box-card:hover{border-color:var(--amber-dim);}
+  .box-card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:3px;
+    background:repeating-linear-gradient(90deg, var(--border) 0 6px, transparent 6px 11px);
+  }
+  .box-card.mixed{background:var(--mixed);border-color:#5c4d20;}
+  .box-card.over{background:var(--over);border-color:#7a3a34;}
+  .box-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;margin-top:2px;}
+  .box-head .num{font-family:'IBM Plex Mono',monospace;color:var(--amber);font-size:13px;font-weight:600;}
+  .box-head .tag{font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-dim);}
+  .box-line{display:flex;justify-content:space-between;font-size:13px;padding:2px 0;font-family:'IBM Plex Mono',monospace;}
+  .box-line .qty{color:var(--amber);}
+  .box-total{border-top:1px dashed var(--border);margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;font-size:13px;font-weight:600;}
+
+  .toast{
+    position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(8px);
+    background:var(--bg-elev2);border:1px solid var(--amber-dim);color:var(--text);
+    padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;
+    transition:opacity .3s var(--ease), transform .3s var(--ease);z-index:100;max-width:88vw;text-align:center;
+    box-shadow:0 10px 30px -10px rgba(0,0,0,0.6);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .note{font-size:11px;color:var(--text-dim);margin-top:10px;line-height:1.5;}
+  .legend{display:flex;gap:14px;font-size:11px;color:var(--text-dim);margin-top:10px;flex-wrap:wrap;}
+  .legend span{display:flex;align-items:center;gap:5px;}
+  .dot{width:10px;height:10px;border-radius:3px;display:inline-block;}
+
+  /* ---- toolbar (search / filters) ---- */
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+  .toolbar input{flex:2;min-width:140px;}
+  .toolbar select{flex:1;min-width:100px;}
+
+  /* ---- dashboard ---- */
+  .dashboard{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;}
+  .dash-tile{
+    background:var(--bg-elev2);border:1px solid var(--border);border-left:3px solid var(--amber-dim);
+    border-radius:8px;padding:10px 10px;transition:border-color .2s ease;
+  }
+  .dash-tile:hover{border-left-color:var(--amber);}
+  .dash-tile .val{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--amber);line-height:1;}
+  .dash-tile .lbl{font-size:9.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.05em;margin-top:3px;}
+
+  /* ---- fill bar (animates to width on render) ---- */
+  .fill-bar{height:5px;border-radius:3px;background:var(--border);margin-bottom:6px;overflow:hidden;}
+  .fill-bar .fill{height:100%;width:0;transition:width .6s var(--ease);}
+  .fill-green{background:var(--success);}
+  .fill-yellow{background:#d9c24a;}
+  .fill-orange{background:var(--amber);}
+  .fill-red{background:var(--danger);}
+
+  /* ---- manual move controls ---- */
+  .move-row{display:flex;gap:5px;align-items:center;margin:2px 0 6px;}
+  .move-row input{padding:5px 5px;font-size:11px;max-width:52px;}
+  .move-row select{padding:5px 5px;font-size:11px;flex:1;}
+  .move-row button{padding:5px 9px;font-size:12px;flex:0 0 auto;}
+
+  /* ---- history ---- */
+  .history-list{font-size:12px;color:var(--text-dim);max-height:220px;overflow:auto;margin-top:6px;}
+  .history-list div{padding:5px 0;border-bottom:1px solid var(--border);}
+  .history-list div:last-child{border-bottom:none;}
+
+  /* ---- floating action button ---- */
+  .fab{
+    position:fixed;right:18px;bottom:18px;z-index:50;
+    width:58px;height:58px;border-radius:50%;
+    background:var(--amber);color:#1a1400;border:none;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;font-size:24px;
+    box-shadow:0 10px 26px -6px var(--amber-glow), 0 2px 8px rgba(0,0,0,0.4);
+    transition:transform .15s var(--ease), box-shadow .2s ease;
+  }
+  .fab:active{transform:scale(0.92);}
+  .fab.pulse{animation:fabPulse 2.2s ease-in-out infinite;}
+  @keyframes fabPulse{
+    0%,100%{ box-shadow:0 10px 26px -6px var(--amber-glow), 0 2px 8px rgba(0,0,0,0.4), 0 0 0 0 var(--amber-glow); }
+    50%{ box-shadow:0 10px 26px -6px var(--amber-glow), 0 2px 8px rgba(0,0,0,0.4), 0 0 0 10px transparent; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important;animation-iteration-count:1 !important;transition-duration:0.001ms !important;}
+  }
+</style>
+</head>
+<body>
+
+<header id="app-header">
+  <div class="brand-row">
+    <div class="crate-mark">📦</div>
+    <div>
+      <h1>BRIDGE FULFILLMENT</h1>
+      <p class="sub">Распределитель по коробам</p>
+    </div>
+  </div>
+  <p>Раскладка товаров по коробам для отправки на склады</p>
+  <div class="stripe"></div>
+</header>
+
+<main>
+
+  <div class="card">
+    <h2><span class="n">01</span>Добавить товар</h2>
+    <label for="f-model">Модель / бренд</label>
+    <input list="model-list" id="f-model" placeholder="напр. Louvre classico">
+    <datalist id="model-list"></datalist>
+
+    <div class="row2">
+      <div>
+        <label for="f-color">Цвет</label>
+        <input list="color-list" id="f-color" placeholder="напр. чёрный">
+        <datalist id="color-list"></datalist>
+      </div>
+      <div>
+        <label for="f-size">Размер</label>
+        <select id="f-size"></select>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div>
+        <label for="f-qty">Количество</label>
+        <input type="number" id="f-qty" min="1" step="1" placeholder="0">
+      </div>
+      <div>
+        <label for="f-city">Город отправки</label>
+        <select id="f-city"></select>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="add-btn">Добавить в список</button>
+    <div class="note">Если товар с такой же моделью, цветом, размером и городом уже есть в списке — количество будет просто прибавлено к существующей строке, новая строка не создастся.</div>
+
+    <details style="margin-top:12px;">
+      <summary>Управление городами</summary>
+      <div class="chip-row" id="city-chips"></div>
+      <div class="row2" style="margin-top:10px;">
+        <input id="new-city" placeholder="Новый город">
+        <button class="btn-secondary" id="add-city-btn">Добавить город</button>
+      </div>
+    </details>
+
+    <details style="margin-top:8px;">
+      <summary>Управление размерами</summary>
+      <div class="chip-row" id="size-chips"></div>
+      <div class="row2" style="margin-top:10px;">
+        <input id="new-size" placeholder="Новый размер, напр. 4XL">
+        <button class="btn-secondary" id="add-size-btn">Добавить размер</button>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">02</span>Список товаров <span id="items-count" class="mono" style="color:var(--text-dim);font-size:13px;"></span></h2>
+    <div class="toolbar">
+      <input id="search-input" placeholder="Поиск: модель, цвет, размер, город">
+      <select id="filter-city"><option value="">Все города</option></select>
+      <select id="filter-model"><option value="">Все модели</option></select>
+      <select id="filter-size"><option value="">Все размеры</option></select>
+    </div>
+    <div id="items-table" class="table-scroll"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">03</span>Импорт / экспорт проекта</h2>
+    <div class="btn-row" style="margin-top:0;">
+      <button class="btn-secondary" id="import-excel-btn">Импорт из Excel</button>
+      <input type="file" id="import-excel-file" accept=".xlsx" style="display:none;">
+    </div>
+    <div class="btn-row">
+      <button class="btn-secondary" id="save-project-btn">Сохранить проект (JSON)</button>
+      <button class="btn-secondary" id="load-project-btn">Загрузить проект</button>
+      <input type="file" id="load-project-file" accept="application/json,.json" style="display:none;">
+    </div>
+    <div class="note">Импорт понимает как отдельный лист с колонками Город / Модель / Цвет / Размер / Кол-во, так и файлы, ранее выгруженные этим же приложением (по одному листу на город).</div>
+    <details style="margin-top:10px;">
+      <summary>История операций</summary>
+      <div class="history-list" id="history-list"></div>
+    </details>
+  </div>
+
+  <div class="card">
+    <details>
+      <summary>⚙️ Настройки коробов</summary>
+      <label>Вместимость короба, шт</label>
+      <input type="number" id="s-box" min="1">
+      <label>Максимум с перебором (для мелких размеров), шт</label>
+      <input type="number" id="s-cap" min="1">
+      <label>Порог «мелкого» короба, при котором остаток раскидывается по другим, шт</label>
+      <input type="number" id="s-tiny" min="1">
+      <label>Мелкие размеры (можно грузить с перебором)</label>
+      <div class="small-size-grid" id="small-size-grid"></div>
+      <div class="note">Если товар не влезает по 60 шт ровно, остаток смешивается с другими позициями по алгоритму Best Fit Decreasing (минимизация числа коробов). Если получившийся «хвостовой» короб меньше порога — приложение сперва пытается полностью раскидать его по другим коробам (в первую очередь туда, где уже лежат мелкие размеры), и только если это невозможно — оставляет его отдельным коробом.</div>
+    </details>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn-primary" id="distribute-btn" style="margin-top:0;">Распределить по коробам</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn-secondary" id="export-btn">Скачать Excel</button>
+    <button class="btn-danger" id="clear-btn">Очистить всё</button>
+  </div>
+
+  <div id="results"></div>
+
+</main>
+
+<button class="fab" id="fab-distribute" title="Распределить по коробам">📦</button>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   BRIDGE FULFILLMENT — Распределитель по коробам
+   Структура файла:
+     1. Константы и ключи LocalStorage
+     2. Состояние приложения
+     3. Хелперы (toast, id, форматирование, цвет заполненности)
+     4. UI: города / размеры / настройки
+     5. Товары: CRUD, объединение дублей, поиск/сортировка/фильтрация
+     6. Алгоритм распределения (Best Fit Decreasing + перераспределение хвостов)
+     7. Рендер результатов, дашборд аналитики, ручная корректировка коробов
+     8. Экспорт в Excel
+     9. Импорт из Excel
+    10. Сохранение / загрузка проекта (JSON)
+    11. История операций
+    12. Инициализация
+   ========================================================================= */
+
+/* ---------------------------- 1. КОНСТАНТЫ ---------------------------- */
+const DEFAULT_SIZES = ['3XS','2XS','XS','S','M','L','XL','2XL','3XL'];
+const DEFAULT_SMALL = ['3XS','2XS','XS','S'];
+const DEFAULT_CITIES = ['Тула','Санкт Петербург Шушары','Невинномысск','Новосемейкино','Екатеринбург - Перспективная 14'];
+
+const LS = {
+  items: 'boxdist:items',
+  cities: 'boxdist:cities',
+  sizes: 'boxdist:sizes',
+  settings: 'boxdist:settings',
+  small: 'boxdist:smallSizes',
+  history: 'boxdist:history'
+};
+
+function load(key, fallback){
+  try{
+    const raw = localStorage.getItem(key);
+    if(!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return (parsed === null || parsed === undefined) ? fallback : parsed;
+  }catch(e){ return fallback; } // повреждённый LocalStorage — используем значение по умолчанию
+}
+function save(key, val){
+  try{ localStorage.setItem(key, JSON.stringify(val)); }
+  catch(e){ toast('Не удалось сохранить данные локально'); }
+}
+
+/* ---------------------------- 2. СОСТОЯНИЕ ----------------------------- */
+let items = load(LS.items, []);
+let cities = load(LS.cities, DEFAULT_CITIES.slice());
+let sizes = load(LS.sizes, DEFAULT_SIZES.slice());
+let settings = load(LS.settings, { boxSize:60, cap:65, tiny:10 });
+let smallSizes = load(LS.small, DEFAULT_SMALL.slice());
+let history = load(LS.history, []);
+let lastResults = null;
+
+let searchTerm = '';
+let filters = { city:'', model:'', size:'' };
+let sortState = { col:null, dir:1 };
+let editingId = null;
+
+/* ---------------------------- 3. ХЕЛПЕРЫ ------------------------------- */
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function fillClass(pct){
+  if(pct >= 95) return 'fill-green';
+  if(pct >= 75) return 'fill-yellow';
+  if(pct >= 50) return 'fill-orange';
+  return 'fill-red';
+}
+function esc(str){
+  return String(str).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ------------------- 11. ИСТОРИЯ (используется везде) ------------------ */
+function logHistory(type, msg){
+  history.unshift({ ts: Date.now(), type, msg });
+  if(history.length > 30) history = history.slice(0, 30);
+  save(LS.history, history);
+  renderHistory();
+}
+function renderHistory(){
+  const wrap = document.getElementById('history-list');
+  if(!wrap) return;
+  if(!history.length){ wrap.innerHTML = '<div>Пока нет записей</div>'; return; }
+  wrap.innerHTML = history.map(h=>{
+    const d = new Date(h.ts);
+    return `<div>${d.toLocaleString('ru-RU')} — ${esc(h.msg)}</div>`;
+  }).join('');
+}
+
+/* ------------------- 4. UI: размеры / города / настройки --------------- */
+function renderSizeSelect(){
+  const sel = document.getElementById('f-size');
+  const prev = sel.value;
+  sel.innerHTML = sizes.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  if(sizes.includes(prev)) sel.value = prev;
+}
+
+function renderSizeChips(){
+  const chips = document.getElementById('size-chips');
+  chips.innerHTML = sizes.map(s=>`
+    <span class="chip">${esc(s)}<button data-size="${esc(s)}" class="rm-size">✕</button></span>
+  `).join('');
+  chips.querySelectorAll('.rm-size').forEach(btn=>{
+    btn.onclick = ()=>{
+      const s = btn.dataset.size;
+      sizes = sizes.filter(x=>x!==s);
+      smallSizes = smallSizes.filter(x=>x!==s);
+      save(LS.sizes, sizes);
+      save(LS.small, smallSizes);
+      renderSizeChips();
+      renderSizeSelect();
+      renderSmallSizeGrid();
+    };
+  });
+}
+
+document.getElementById('add-size-btn').onclick = ()=>{
+  const val = document.getElementById('new-size').value.trim();
+  if(!val){ toast('Введите размер'); return; }
+  if(sizes.includes(val)){ toast('Такой размер уже есть'); return; }
+  sizes.push(val);
+  save(LS.sizes, sizes);
+  document.getElementById('new-size').value = '';
+  renderSizeChips();
+  renderSizeSelect();
+  renderSmallSizeGrid();
+};
+
+function renderCities(){
+  const sel = document.getElementById('f-city');
+  const prev = sel.value;
+  sel.innerHTML = cities.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  if(cities.includes(prev)) sel.value = prev;
+  const chips = document.getElementById('city-chips');
+  chips.innerHTML = cities.map(c=>`
+    <span class="chip">${esc(c)}<button data-city="${esc(c)}" class="rm-city">✕</button></span>
+  `).join('');
+  chips.querySelectorAll('.rm-city').forEach(btn=>{
+    btn.onclick = ()=>{
+      cities = cities.filter(c=>c!==btn.dataset.city);
+      save(LS.cities, cities);
+      renderCities();
+    };
+  });
+}
+
+document.getElementById('add-city-btn').onclick = ()=>{
+  const val = document.getElementById('new-city').value.trim();
+  if(!val){ toast('Введите город'); return; }
+  if(cities.includes(val)){ toast('Такой город уже есть'); return; }
+  cities.push(val);
+  save(LS.cities, cities);
+  document.getElementById('new-city').value = '';
+  renderCities();
+};
+
+function renderSmallSizeGrid(){
+  const grid = document.getElementById('small-size-grid');
+  grid.innerHTML = sizes.map(s=>`
+    <div class="size-toggle ${smallSizes.includes(s)?'active':''}" data-size="${esc(s)}">${esc(s)}</div>
+  `).join('');
+  grid.querySelectorAll('.size-toggle').forEach(el=>{
+    el.onclick = ()=>{
+      const s = el.dataset.size;
+      if(smallSizes.includes(s)) smallSizes = smallSizes.filter(x=>x!==s);
+      else smallSizes.push(s);
+      save(LS.small, smallSizes);
+      renderSmallSizeGrid();
+    };
+  });
+}
+
+function renderSettings(){
+  document.getElementById('s-box').value = settings.boxSize;
+  document.getElementById('s-cap').value = settings.cap;
+  document.getElementById('s-tiny').value = settings.tiny;
+}
+['s-box','s-cap','s-tiny'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', ()=>{
+    const box = parseInt(document.getElementById('s-box').value);
+    const cap = parseInt(document.getElementById('s-cap').value);
+    const tiny = parseInt(document.getElementById('s-tiny').value);
+    if(!box || box <= 0){ toast('Вместимость короба должна быть больше 0'); renderSettings(); return; }
+    if(!cap || cap < box){ toast('Лимит с перебором не может быть меньше вместимости короба'); renderSettings(); return; }
+    if(!tiny || tiny <= 0){ toast('Порог мелкого короба должен быть больше 0'); renderSettings(); return; }
+    settings = { boxSize: box, cap, tiny };
+    save(LS.settings, settings);
+  });
+});
+
+/* --------- 5. ТОВАРЫ: CRUD, объединение дублей, поиск/сортировка/фильтр -------- */
+function getFilteredSortedItems(){
+  let list = items;
+  if(searchTerm){
+    const q = searchTerm.toLowerCase();
+    list = list.filter(it=>
+      it.model.toLowerCase().includes(q) ||
+      it.color.toLowerCase().includes(q) ||
+      String(it.size).toLowerCase().includes(q) ||
+      it.city.toLowerCase().includes(q)
+    );
+  }
+  if(filters.city)  list = list.filter(it=>it.city===filters.city);
+  if(filters.model) list = list.filter(it=>it.model===filters.model);
+  if(filters.size)  list = list.filter(it=>it.size===filters.size);
+  if(sortState.col){
+    const col = sortState.col, dir = sortState.dir;
+    list = list.slice().sort((a,b)=>{
+      if(col === 'qty') return (Number(a.qty) - Number(b.qty)) * dir;
+      return String(a[col]).localeCompare(String(b[col]), 'ru') * dir;
+    });
+  }
+  return list;
+}
+
+function renderItemsTable(){
+  refreshFabState();
+  const wrap = document.getElementById('items-table');
+  const countEl = document.getElementById('items-count');
+  if(items.length === 0){
+    wrap.innerHTML = `<div class="empty"><span class="empty-icon">📭</span>Список пуст — добавьте первый товар выше</div>`;
+    countEl.textContent = '';
+    return;
+  }
+  const filtered = getFilteredSortedItems();
+  countEl.textContent = filtered.length === items.length ? `(${items.length})` : `(${filtered.length} из ${items.length})`;
+
+  if(filtered.length === 0){
+    wrap.innerHTML = `<div class="empty"><span class="empty-icon">🔍</span>Ничего не найдено по заданным условиям</div>`;
+    return;
+  }
+
+  const arrow = col => sortState.col===col ? `<span class="arrow">${sortState.dir===1?'▲':'▼'}</span>` : '';
+  const rows = filtered.map(it => {
+    if(it.id === editingId){
+      return `
+        <tr data-id="${it.id}">
+          <td><input class="edit-input" data-f="city" value="${esc(it.city)}"></td>
+          <td><input class="edit-input" data-f="model" value="${esc(it.model)}"></td>
+          <td><input class="edit-input" data-f="color" value="${esc(it.color)}"></td>
+          <td><input class="edit-input" data-f="size" value="${esc(it.size)}"></td>
+          <td><input class="edit-input" data-f="qty" type="number" min="1" value="${it.qty}"></td>
+          <td class="row-actions">
+            <button class="icon-btn save-edit" data-id="${it.id}" title="Сохранить">✓</button>
+            <button class="icon-btn cancel-edit" data-id="${it.id}" title="Отмена">✕</button>
+          </td>
+        </tr>`;
+    }
+    return `
+      <tr data-id="${it.id}">
+        <td>${esc(it.city)}</td>
+        <td>${esc(it.model)}</td>
+        <td>${esc(it.color)}</td>
+        <td>${esc(it.size)}</td>
+        <td>${it.qty}</td>
+        <td class="row-actions">
+          <button class="icon-btn edit-btn" data-id="${it.id}" title="Редактировать">✎</button>
+          <button class="icon-btn del-btn" data-id="${it.id}" title="Удалить">✕</button>
+        </td>
+      </tr>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <table>
+      <thead><tr>
+        <th class="sortable" data-sort="city">Город${arrow('city')}</th>
+        <th class="sortable" data-sort="model">Модель${arrow('model')}</th>
+        <th class="sortable" data-sort="color">Цвет${arrow('color')}</th>
+        <th class="sortable" data-sort="size">Разм.${arrow('size')}</th>
+        <th class="sortable" data-sort="qty">Кол-во${arrow('qty')}</th>
+        <th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+
+  wrap.querySelectorAll('th.sortable').forEach(th=>{
+    th.onclick = ()=>{
+      const col = th.dataset.sort;
+      if(sortState.col === col) sortState.dir *= -1;
+      else { sortState.col = col; sortState.dir = 1; }
+      renderItemsTable();
+    };
+  });
+}
+
+// делегирование событий для таблицы товаров — один обработчик вместо N
+document.getElementById('items-table').addEventListener('click', (e)=>{
+  const delBtn = e.target.closest('.del-btn');
+  const editBtn = e.target.closest('.edit-btn');
+  const saveBtn = e.target.closest('.save-edit');
+  const cancelBtn = e.target.closest('.cancel-edit');
+
+  if(delBtn){
+    items = items.filter(it=>it.id !== delBtn.dataset.id);
+    save(LS.items, items);
+    renderItemsTable();
+    updateDatalists();
+  } else if(editBtn){
+    editingId = editBtn.dataset.id;
+    renderItemsTable();
+  } else if(cancelBtn){
+    editingId = null;
+    renderItemsTable();
+  } else if(saveBtn){
+    const id = saveBtn.dataset.id;
+    const tr = saveBtn.closest('tr');
+    const city  = tr.querySelector('[data-f="city"]').value.trim();
+    const model = tr.querySelector('[data-f="model"]').value.trim();
+    const color = tr.querySelector('[data-f="color"]').value.trim();
+    const size  = tr.querySelector('[data-f="size"]').value.trim();
+    const qty   = parseInt(tr.querySelector('[data-f="qty"]').value);
+    if(!model || !color || !size || !city){ toast('Поля не должны быть пустыми'); return; }
+    if(!qty || qty <= 0){ toast('Количество должно быть больше нуля'); return; }
+    const it = items.find(x=>x.id === id);
+    it.city = city; it.model = model; it.color = color; it.size = size; it.qty = qty;
+    save(LS.items, items);
+    editingId = null;
+    logHistory('edit', `Изменён товар: ${model} · ${color} · ${size} → ${qty} шт (${city})`);
+    renderItemsTable();
+    updateDatalists();
+    toast('Сохранено');
+  }
+});
+
+document.getElementById('search-input').addEventListener('input', (e)=>{
+  searchTerm = e.target.value;
+  renderItemsTable();
+});
+['filter-city','filter-model','filter-size'].forEach(id=>{
+  document.getElementById(id).addEventListener('change', (e)=>{
+    const key = id.replace('filter-','');
+    filters[key] = e.target.value;
+    renderItemsTable();
+  });
+});
+
+// добавление товара — с объединением дублей (модель+цвет+размер+город)
+document.getElementById('add-btn').onclick = ()=>{
+  const model = document.getElementById('f-model').value.trim();
+  const color = document.getElementById('f-color').value.trim();
+  const size = document.getElementById('f-size').value;
+  const qty = parseInt(document.getElementById('f-qty').value);
+  const city = document.getElementById('f-city').value;
+
+  if(!model){ toast('Укажите модель'); return; }
+  if(!color){ toast('Укажите цвет'); return; }
+  if(!qty || qty <= 0){ toast('Укажите количество больше нуля'); return; }
+  if(!city){ toast('Выберите город'); return; }
+
+  const existing = items.find(it=>it.model===model && it.color===color && it.size===size && it.city===city);
+  if(existing){
+    existing.qty += qty;
+    toast(`Количество увеличено до ${existing.qty}`);
+  } else {
+    items.push({ id: uid(), model, color, size, qty, city });
+    toast('Добавлено');
+  }
+  save(LS.items, items);
+  renderItemsTable();
+  updateDatalists();
+
+  document.getElementById('f-qty').value = '';
+  document.getElementById('f-model').focus();
+};
+
+function updateDatalists(){
+  const models = [...new Set(items.map(it=>it.model))];
+  const colors = [...new Set(items.map(it=>it.color))];
+  const citiesUsed = [...new Set(items.map(it=>it.city))];
+  const sizesUsed = [...new Set(items.map(it=>it.size))];
+
+  document.getElementById('model-list').innerHTML = models.map(m=>`<option value="${esc(m)}">`).join('');
+  document.getElementById('color-list').innerHTML = colors.map(c=>`<option value="${esc(c)}">`).join('');
+
+  const fCity = document.getElementById('filter-city');
+  const fModel = document.getElementById('filter-model');
+  const fSize = document.getElementById('filter-size');
+  const cur = { city: fCity.value, model: fModel.value, size: fSize.value };
+
+  fCity.innerHTML = `<option value="">Все города</option>` + citiesUsed.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  fModel.innerHTML = `<option value="">Все модели</option>` + models.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('');
+  fSize.innerHTML = `<option value="">Все размеры</option>` + sizesUsed.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+
+  fCity.value = citiesUsed.includes(cur.city) ? cur.city : '';
+  fModel.value = models.includes(cur.model) ? cur.model : '';
+  fSize.value = sizesUsed.includes(cur.size) ? cur.size : '';
+  if(fCity.value !== cur.city || fModel.value !== cur.model || fSize.value !== cur.size){
+    filters = { city: fCity.value, model: fModel.value, size: fSize.value };
+  }
+}
+
+document.getElementById('clear-btn').onclick = ()=>{
+  if(!confirm('Удалить весь список товаров и результаты?')) return;
+  items = [];
+  save(LS.items, items);
+  lastResults = null;
+  editingId = null;
+  renderItemsTable();
+  renderResults(null);
+  updateDatalists();
+  toast('Очищено');
+};
+
+/* ------------------ 6. АЛГОРИТМ РАСПРЕДЕЛЕНИЯ (BFD) --------------------
+   Идея:
+   1) Каждая позиция сначала заполняет столько ПОЛНЫХ коробов (ровно BOX
+      штук), сколько получается — это всегда оптимально, смешивать их
+      незачем.
+   2) Остатки (всегда < BOX) сортируются по убыванию и упаковываются
+      алгоритмом Best Fit Decreasing: для каждого остатка ищем уже
+      открытый короб с наименьшим оставшимся свободным местом, в которое
+      он всё ещё влезает («лучшая подгонка»); если такого нет — открываем
+      новый короб. Это уменьшает количество смешанных коробов по
+      сравнению с последовательной укладкой «подряд».
+   3) Если после упаковки остаётся один или несколько коробов меньше
+      порога settings.tiny — сначала пробуем полностью раскидать все
+      позиции такого короба по другим коробам (приоритет — коробам, где
+      уже лежат мелкие размеры, т.к. их можно грузить с перебором до
+      cap). Короб убирается только если удалось пристроить ВСЕ его
+      позиции. Если распределить целиком не получилось — короб остаётся
+      как есть (лучше отдельный короб, чем испортить остальные).
+   ------------------------------------------------------------------- */
+function distributeCity(cityItems){
+  const BOX = settings.boxSize, CAP = settings.cap, TINY = settings.tiny;
+  const isSmall = (x)=> smallSizes.includes(x.size);
+
+  // объединяем дубли по модель|цвет|размер (в рамках одного города)
+  const mergedMap = new Map();
+  cityItems.forEach(it=>{
+    const key = it.model+'|'+it.color+'|'+it.size;
+    if(!mergedMap.has(key)) mergedMap.set(key, { model: it.model, color: it.color, size: it.size, qty: 0 });
+    mergedMap.get(key).qty += Number(it.qty);
+  });
+  const list = [...mergedMap.values()];
+
+  const singleBoxes = [];
+  const leftover = [];
+  list.forEach(it=>{
+    const full = Math.floor(it.qty / BOX);
+    const rem = it.qty % BOX;
+    for(let i=0;i<full;i++){
+      singleBoxes.push([{ model: it.model, color: it.color, size: it.size, qty: BOX }]);
+    }
+    if(rem > 0) leftover.push({ model: it.model, color: it.color, size: it.size, qty: rem });
+  });
+
+  // ---- Best Fit Decreasing упаковка остатков ----
+  leftover.sort((a,b)=> b.qty - a.qty);
+  const bins = []; // { items:[{model,color,size,qty}], total }
+  leftover.forEach(it=>{
+    let bestIdx = -1, bestSpace = Infinity;
+    for(let i=0;i<bins.length;i++){
+      const space = BOX - bins[i].total;
+      if(it.qty <= space && space < bestSpace){ bestSpace = space; bestIdx = i; }
+    }
+    if(bestIdx === -1){
+      bins.push({ items: [{ ...it }], total: it.qty });
+    } else {
+      bins[bestIdx].items.push({ ...it });
+      bins[bestIdx].total += it.qty;
+    }
+  });
+
+  // ---- перераспределение «хвостовых» коробов меньше порога TINY ----
+  let guard = 0;
+  while(guard++ < bins.length + 1){
+    const tinyIdx = bins.findIndex(b => b.total > 0 && b.total < TINY);
+    if(tinyIdx === -1 || bins.length <= 1) break;
+
+    const tinyBin = bins[tinyIdx];
+    const others = bins.filter((_,i)=> i !== tinyIdx);
+    const simTotals = others.map(b=>b.total);
+    const placements = []; // { otherIndex, model, color, size, qty }
+    let allPlaced = true;
+
+    for(const x of tinyBin.items){
+      let remaining = x.qty;
+      const order = others
+        .map((o,idx)=>({ idx, space: CAP - simTotals[idx], hasSmall: o.items.some(isSmall) }))
+        .filter(o=> o.space > 0)
+        .sort((a,b)=> (b.hasSmall - a.hasSmall) || (b.space - a.space));
+      for(const o of order){
+        if(remaining <= 0) break;
+        const take = Math.min(o.space, remaining);
+        if(take <= 0) continue;
+        placements.push({ otherIndex: o.idx, model: x.model, color: x.color, size: x.size, qty: take });
+        simTotals[o.idx] += take;
+        remaining -= take;
+      }
+      if(remaining > 0){ allPlaced = false; break; }
+    }
+
+    if(!allPlaced) break; // раскидать целиком не получилось — оставляем короб как есть
+
+    placements.forEach(p=>{
+      const targetBin = others[p.otherIndex];
+      const existingLine = targetBin.items.find(y=> y.model===p.model && y.color===p.color && y.size===p.size);
+      if(existingLine) existingLine.qty += p.qty;
+      else targetBin.items.push({ model: p.model, color: p.color, size: p.size, qty: p.qty });
+      targetBin.total += p.qty;
+    });
+    bins.splice(tinyIdx, 1);
+  }
+
+  const mixedBoxes = bins.map(b=>b.items);
+  return singleBoxes.concat(mixedBoxes);
+}
+
+function runDistribution(){
+  if(items.length === 0){ toast('Сначала добавьте товары'); return null; }
+  const usedCities = [...new Set(items.map(it=>it.city))];
+  const results = {};
+  usedCities.forEach(city=>{
+    const cityItems = items.filter(it=>it.city === city);
+    results[city] = distributeCity(cityItems);
+  });
+  return results;
+}
+
+/* ------------- 7. РЕНДЕР РЕЗУЛЬТАТОВ + ДАШБОРД + РУЧНАЯ КОРРЕКТИРОВКА ------------- */
+function computeDashboard(results){
+  const boxesAll = Object.values(results).flat();
+  const totalBoxes = boxesAll.length;
+  const totalQty = boxesAll.reduce((s,b)=> s + b.reduce((s2,x)=>s2+x.qty,0), 0);
+  const fills = boxesAll.map(b=> b.reduce((s,x)=>s+x.qty,0) / settings.boxSize * 100);
+  const avgFill = fills.length ? fills.reduce((a,b)=>a+b,0)/fills.length : 0;
+  const maxFill = fills.length ? Math.max(...fills) : 0;
+  const minFill = fills.length ? Math.min(...fills) : 0;
+  const nMixed = boxesAll.filter(b=>b.length>1).length;
+  const nOver = boxesAll.filter(b=> b.reduce((s,x)=>s+x.qty,0) > settings.boxSize).length;
+  const nCities = Object.keys(results).length;
+  const avgItemsPerBox = totalBoxes ? boxesAll.reduce((s,b)=>s+b.length,0)/totalBoxes : 0;
+  return { totalQty, totalBoxes, avgFill, maxFill, minFill, nMixed, nOver, nCities, avgItemsPerBox };
+}
+
+function renderResults(results){
+  refreshFabState();
+  const wrap = document.getElementById('results');
+  if(!results){ wrap.innerHTML=''; return; }
+  const cityNames = Object.keys(results);
+  if(cityNames.length === 0){
+    wrap.innerHTML = `<div class="empty"><span class="empty-icon">📦</span>Нет данных для распределения</div>`;
+    return;
+  }
+
+  const dash = computeDashboard(results);
+  const dashboardHtml = `
+    <div class="card">
+      <h2><span class="n">04</span>Аналитика</h2>
+      <div class="dashboard">
+        ${[
+          [items.length, 0, '', 'Товаров, строк'],
+          [dash.totalBoxes, 0, '', 'Всего коробов'],
+          [dash.avgFill, 0, '%', 'Средняя загрузка'],
+          [dash.maxFill, 0, '%', 'Макс. загрузка'],
+          [dash.minFill, 0, '%', 'Мин. загрузка'],
+          [dash.nMixed, 0, '', 'Смешанных'],
+          [dash.nOver, 0, '', 'С перебором'],
+          [dash.nCities, 0, '', 'Городов'],
+          [dash.avgItemsPerBox, 1, '', 'Ср. позиций/короб']
+        ].map(([val, dec, suf, lbl])=>`
+          <div class="dash-tile"><div class="val counter" data-target="${val}" data-decimals="${dec}" data-suffix="${suf}">0${suf}</div><div class="lbl">${lbl}</div></div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  const bodyHtml = cityNames.map(city=>{
+    const boxes = results[city];
+    const total = boxes.reduce((s,b)=> s + b.reduce((s2,x)=>s2+x.qty,0), 0);
+    const nSingle = boxes.filter(b=>b.length===1).length;
+    const nMixed = boxes.length - nSingle;
+    const boxesHtml = boxes.map((box, idx)=>{
+      const boxTotal = box.reduce((s,x)=>s+x.qty,0);
+      const isMixed = box.length > 1;
+      const isOver = boxTotal > settings.boxSize;
+      const cls = isOver ? 'over' : (isMixed ? 'mixed' : '');
+      const tag = isOver ? 'перебор' : (isMixed ? 'смешанный' : 'цельный');
+      const pct = Math.round(boxTotal / settings.boxSize * 100);
+      const fcls = fillClass(pct);
+      const targetOptions = boxes.map((_,bi)=> bi===idx ? '' : `<option value="${bi}">→ Короб ${bi+1}</option>`).join('')
+        + `<option value="new">→ новый короб</option>`;
+      const lines = box.map((x,li)=>`
+        <div class="box-line"><span>${esc(x.model)} · ${esc(x.color)} · ${esc(x.size)}</span><span class="qty">${x.qty}</span></div>
+        <div class="move-row">
+          <input type="number" min="1" max="${x.qty}" value="${x.qty}" class="move-qty">
+          <select class="move-target">${targetOptions}</select>
+          <button class="btn-ghost move-btn" data-city="${esc(city)}" data-box="${idx}" data-line="${li}">Перенести</button>
+        </div>
+      `).join('');
+      const delay = Math.min(idx * 0.04, 0.4).toFixed(2);
+      return `
+        <div class="box-card ${cls}" style="animation-delay:${delay}s;">
+          <div class="box-head"><span class="num">Короб ${idx+1}</span><span class="tag">${tag} · ${pct}%</span></div>
+          <div class="fill-bar"><div class="fill ${fcls}" data-pct="${Math.min(pct,100)}"></div></div>
+          ${lines}
+          <div class="box-total"><span>Итого</span><span>${boxTotal} шт</span></div>
+        </div>
+      `;
+    }).join('');
+    return `
+      <div class="city-block">
+        <h3>${esc(city)} <span class="city-stats">${total} шт · ${boxes.length} короб. (${nSingle} цельн. / ${nMixed} смеш.)</span></h3>
+        <div class="box-grid">${boxesHtml}</div>
+      </div>
+    `;
+  }).join('') + `
+    <div class="legend">
+      <span><span class="dot" style="background:var(--bg-elev2);border:1px solid var(--border);"></span>цельный короб</span>
+      <span><span class="dot" style="background:var(--mixed);border:1px solid #5c4d20;"></span>смешанный</span>
+      <span><span class="dot" style="background:var(--over);border:1px solid #7a3a34;"></span>с перебором (мелкие размеры)</span>
+    </div>
+  `;
+
+  wrap.innerHTML = dashboardHtml + bodyHtml;
+  attachMoveHandlers();
+  animateCounters(wrap);
+  animateFillBars(wrap);
+}
+
+// анимация счётчиков дашборда (нарастание от 0 до значения)
+function animateCounters(scope){
+  scope.querySelectorAll('.counter').forEach(el=>{
+    const target = parseFloat(el.dataset.target) || 0;
+    const decimals = parseInt(el.dataset.decimals) || 0;
+    const suffix = el.dataset.suffix || '';
+    const duration = 650;
+    const start = performance.now();
+    function tick(now){
+      const p = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const val = target * eased;
+      el.textContent = val.toFixed(decimals) + suffix;
+      if(p < 1) requestAnimationFrame(tick);
+      else el.textContent = target.toFixed(decimals) + suffix;
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+// анимация полос заполненности короба (ширина 0 -> целевой процент)
+function animateFillBars(scope){
+  const bars = scope.querySelectorAll('.fill-bar .fill');
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      bars.forEach(b=>{ b.style.width = (b.dataset.pct || 0) + '%'; });
+    });
+  });
+}
+
+function attachMoveHandlers(){
+  document.querySelectorAll('.move-btn').forEach(btn=>{
+    btn.onclick = ()=>{
+      const city = btn.dataset.city;
+      const boxIdx = parseInt(btn.dataset.box);
+      const lineIdx = parseInt(btn.dataset.line);
+      const row = btn.closest('.move-row');
+      const qty = parseInt(row.querySelector('.move-qty').value);
+      const target = row.querySelector('.move-target').value;
+      if(!qty || qty <= 0){ toast('Укажите количество больше нуля'); return; }
+      moveItem(city, boxIdx, lineIdx, qty, target);
+    };
+  });
+}
+
+// ручная корректировка: перенос части (или всей) строки из одного короба в другой
+function moveItem(city, boxIdx, lineIdx, qty, target){
+  const boxes = lastResults[city];
+  const box = boxes[boxIdx];
+  const line = box[lineIdx];
+  const take = Math.min(qty, line.qty);
+  const moved = { model: line.model, color: line.color, size: line.size, qty: take };
+  line.qty -= take;
+  if(line.qty <= 0) box.splice(lineIdx, 1);
+
+  if(target === 'new'){
+    boxes.push([moved]);
+  } else {
+    const targetBox = boxes[parseInt(target)];
+    const existingLine = targetBox.find(x=> x.model===moved.model && x.color===moved.color && x.size===moved.size);
+    if(existingLine) existingLine.qty += moved.qty;
+    else targetBox.push(moved);
+  }
+  lastResults[city] = boxes.filter(b=>b.length > 0);
+
+  logHistory('move', `Перенесено ${take} шт (${moved.model} · ${moved.color} · ${moved.size}) в городе ${city}`);
+  renderResults(lastResults);
+  toast('Перенесено');
+}
+
+function distributeAndScroll(){
+  lastResults = runDistribution();
+  renderResults(lastResults);
+  if(lastResults){
+    logHistory('distribute', `Выполнено распределение по коробам: ${items.length} строк товаров`);
+    document.getElementById('results').scrollIntoView({ behavior:'smooth' });
+  }
+}
+document.getElementById('distribute-btn').onclick = distributeAndScroll;
+document.getElementById('fab-distribute').onclick = distributeAndScroll;
+
+// FAB мягко пульсирует, пока не выполнено первое распределение — подсказка, где главное действие
+function refreshFabState(){
+  const fab = document.getElementById('fab-distribute');
+  if(!fab) return;
+  fab.classList.toggle('pulse', items.length > 0 && !lastResults);
+}
+
+// тень у шапки при прокрутке страницы
+window.addEventListener('scroll', ()=>{
+  const header = document.getElementById('app-header');
+  if(!header) return;
+  header.classList.toggle('scrolled', window.scrollY > 4);
+}, { passive:true });
+
+/* ---------------------------- 8. ЭКСПОРТ В EXCEL ------------------------ */
+async function exportExcel(){
+  if(!lastResults){
+    lastResults = runDistribution();
+    renderResults(lastResults);
+  }
+  if(!lastResults) return;
+
+  const wb = new ExcelJS.Workbook();
+  const headerFill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF2F5496' } };
+  const mixedFill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFF2CC' } };
+  const overFill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFCE4D6' } };
+  const altFill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFEAF1FB' } };
+  const thin = { style:'thin', color:{ argb:'FF999999' } };
+  const border = { top:thin, bottom:thin, left:thin, right:thin };
+
+  const cityNames = Object.keys(lastResults);
+  const sumSheet = wb.addWorksheet('Сводка');
+  sumSheet.getCell('A1').value = 'BRIDGE FULFILLMENT — Сводка по распределению коробов';
+  sumSheet.getCell('A1').font = { name:'Arial', bold:true, size:13, color:{ argb:'FF2F5496' } };
+  sumSheet.mergeCells('A1:F1');
+  sumSheet.getCell('A2').value = `Сформировано: ${new Date().toLocaleString('ru-RU')}`;
+  sumSheet.getCell('A2').font = { name:'Arial', italic:true, size:9, color:{ argb:'FF666666' } };
+  sumSheet.mergeCells('A2:F2');
+
+  const sumHeaders = ['Город','Всего коробов','Всего штук','Цельных','Смешанных','С перебором'];
+  sumHeaders.forEach((h,i)=>{
+    const cell = sumSheet.getCell(3, i+1);
+    cell.value = h;
+    cell.font = { name:'Arial', bold:true, color:{ argb:'FFFFFFFF' }, size:11 };
+    cell.fill = headerFill;
+    cell.alignment = { horizontal:'center', vertical:'middle' };
+    cell.border = border;
+  });
+
+  let r = 4;
+  let totBoxes=0, totQty=0, totSingle=0, totMixed=0, totOver=0;
+  cityNames.forEach(city=>{
+    const boxes = lastResults[city];
+    const total = boxes.reduce((s,b)=> s + b.reduce((s2,x)=>s2+x.qty,0), 0);
+    const nSingle = boxes.filter(b=>b.length===1).length;
+    const nMixed = boxes.length - nSingle;
+    const nOver = boxes.filter(b=> b.reduce((s2,x)=>s2+x.qty,0) > settings.boxSize).length;
+    totBoxes+=boxes.length; totQty+=total; totSingle+=nSingle; totMixed+=nMixed; totOver+=nOver;
+    [city, boxes.length, total, nSingle, nMixed, nOver].forEach((v,i)=>{
+      const cell = sumSheet.getCell(r, i+1);
+      cell.value = v;
+      cell.font = { name:'Arial', size:10 };
+      cell.border = border;
+      cell.alignment = { horizontal: i===0?'left':'center' };
+    });
+    r++;
+  });
+  ['ИТОГО', totBoxes, totQty, totSingle, totMixed, totOver].forEach((v,i)=>{
+    const cell = sumSheet.getCell(r, i+1);
+    cell.value = v;
+    cell.font = { name:'Arial', bold:true, size:10 };
+    cell.border = border;
+    cell.alignment = { horizontal:'center' };
+  });
+
+  // параметры распределения
+  r += 2;
+  sumSheet.getCell(r,1).value = 'Параметры распределения';
+  sumSheet.getCell(r,1).font = { name:'Arial', bold:true, size:11, color:{ argb:'FF2F5496' } };
+  r++;
+  [
+    ['Вместимость короба, шт', settings.boxSize],
+    ['Максимум с перебором, шт', settings.cap],
+    ['Порог мелкого короба, шт', settings.tiny],
+    ['Мелкие размеры (можно с перебором)', smallSizes.join(', ')]
+  ].forEach(([k,v])=>{
+    sumSheet.getCell(r,1).value = k;
+    sumSheet.getCell(r,2).value = v;
+    sumSheet.getCell(r,1).font = { name:'Arial', size:10 };
+    sumSheet.getCell(r,2).font = { name:'Arial', size:10 };
+    r++;
+  });
+
+  // итоговая статистика / аналитика
+  r++;
+  const dash = computeDashboard(lastResults);
+  sumSheet.getCell(r,1).value = 'Итоговая статистика';
+  sumSheet.getCell(r,1).font = { name:'Arial', bold:true, size:11, color:{ argb:'FF2F5496' } };
+  r++;
+  [
+    ['Средняя заполненность короба, %', dash.avgFill.toFixed(1)],
+    ['Максимальная заполненность, %', dash.maxFill.toFixed(1)],
+    ['Минимальная заполненность, %', dash.minFill.toFixed(1)],
+    ['Смешанных коробов, всего', dash.nMixed],
+    ['Коробов с перебором, всего', dash.nOver],
+    ['Городов', dash.nCities],
+    ['Среднее число позиций на короб', dash.avgItemsPerBox.toFixed(1)]
+  ].forEach(([k,v])=>{
+    sumSheet.getCell(r,1).value = k;
+    sumSheet.getCell(r,2).value = v;
+    sumSheet.getCell(r,1).font = { name:'Arial', size:10 };
+    sumSheet.getCell(r,2).font = { name:'Arial', size:10 };
+    r++;
+  });
+
+  sumSheet.getColumn(1).width = 34;
+  sumSheet.getColumn(2).width = 16;
+  sumSheet.getColumn(3).width = 12;
+  sumSheet.getColumn(4).width = 11;
+  sumSheet.getColumn(5).width = 13;
+  sumSheet.getColumn(6).width = 13;
+
+  cityNames.forEach(city=>{
+    const boxes = lastResults[city];
+    const total = boxes.reduce((s,b)=> s + b.reduce((s2,x)=>s2+x.qty,0), 0);
+    const sheetName = city.slice(0,31);
+    const sh = wb.addWorksheet(sheetName);
+    sh.getCell('A1').value = `Распределение по коробам: ${city}`;
+    sh.getCell('A1').font = { name:'Arial', bold:true, size:13, color:{ argb:'FF2F5496' } };
+    sh.mergeCells('A1:E1');
+    sh.getCell('A2').value = `Всего: ${total} шт | Коробов: ${boxes.length}`;
+    sh.getCell('A2').font = { name:'Arial', italic:true, size:10, color:{ argb:'FF666666' } };
+    sh.mergeCells('A2:E2');
+
+    let row = 4;
+    ['Короб №','Модель','Цвет / Размер','Кол-во, шт','Заполненность, %'].forEach((h,i)=>{
+      const cell = sh.getCell(row, i+1);
+      cell.value = h;
+      cell.font = { name:'Arial', bold:true, color:{ argb:'FFFFFFFF' }, size:11 };
+      cell.fill = headerFill;
+      cell.alignment = { horizontal:'center', vertical:'middle' };
+      cell.border = border;
+    });
+    row++;
+
+    boxes.forEach((box, idx)=>{
+      const startRow = row;
+      const boxTotal = box.reduce((s,x)=>s+x.qty,0);
+      const isMixed = box.length > 1;
+      const isOver = boxTotal > settings.boxSize;
+      const pct = Math.round(boxTotal / settings.boxSize * 100);
+      box.forEach(x=>{
+        sh.getCell(row,1).value = idx+1;
+        sh.getCell(row,2).value = x.model;
+        sh.getCell(row,3).value = `${x.color} / ${x.size}`;
+        sh.getCell(row,4).value = x.qty;
+        for(let c=1;c<=5;c++){
+          const cell = sh.getCell(row,c);
+          cell.font = { name:'Arial', size:10 };
+          cell.alignment = { horizontal: c===2?'left':'center', vertical:'middle' };
+          cell.border = border;
+          if(isOver) cell.fill = overFill;
+          else if(isMixed) cell.fill = mixedFill;
+          else if(idx % 2 === 0) cell.fill = altFill;
+        }
+        row++;
+      });
+      if(row-1 > startRow){
+        sh.mergeCells(startRow,1,row-1,1);
+        sh.getCell(startRow,1).alignment = { horizontal:'center', vertical:'middle' };
+      }
+      const label = isOver ? 'Итого в коробе (перебор — мелкие размеры):' : 'Итого в коробе:';
+      sh.getCell(row,3).value = label;
+      sh.getCell(row,3).font = { name:'Arial', bold:true, size:10 };
+      sh.getCell(row,3).alignment = { horizontal:'right' };
+      sh.getCell(row,4).value = boxTotal;
+      sh.getCell(row,4).font = { name:'Arial', bold:true, size:10 };
+      sh.getCell(row,5).value = pct + '%';
+      sh.getCell(row,5).font = { name:'Arial', bold:true, size:10 };
+      for(let c=1;c<=5;c++) sh.getCell(row,c).border = border;
+      row++;
+    });
+
+    sh.getColumn(1).width = 10;
+    sh.getColumn(2).width = 22;
+    sh.getColumn(3).width = 22;
+    sh.getColumn(4).width = 14;
+    sh.getColumn(5).width = 16;
+    sh.views = [{ state:'frozen', ySplit:4 }];
+  });
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type:'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'BRIDGE_Распределение_по_коробам.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  logHistory('export', `Экспортирован Excel-файл (${cityNames.length} город(ов), ${totBoxes} коробов)`);
+  toast('Файл сохранён');
+}
+document.getElementById('export-btn').onclick = exportExcel;
+
+/* ---------------------------- 9. ИМПОРТ ИЗ EXCEL ------------------------- */
+document.getElementById('import-excel-btn').onclick = ()=> document.getElementById('import-excel-file').click();
+document.getElementById('import-excel-file').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const buf = await file.arrayBuffer();
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+
+    let imported = 0, skipped = 0;
+
+    wb.worksheets.forEach(sheet=>{
+      // ищем строку заголовков в первых 10 строках листа
+      let headerRowIdx = -1, colMap = {};
+      for(let rIdx=1; rIdx<=Math.min(10, sheet.rowCount); rIdx++){
+        const row = sheet.getRow(rIdx);
+        const map = {};
+        row.eachCell((cell, colNumber)=>{
+          const v = String(cell.value || '').trim().toLowerCase();
+          if(v.includes('город')) map.city = colNumber;
+          else if(v.includes('модель')) map.model = colNumber;
+          else if(v.includes('цвет')) map.color = colNumber;
+          else if(v.includes('размер')) map.size = colNumber;
+          else if(v.includes('кол-во') || v.includes('количество')) map.qty = colNumber;
+        });
+        if(map.model && map.qty){ headerRowIdx = rIdx; colMap = map; break; }
+      }
+      if(headerRowIdx === -1) return; // на листе нет подходящей таблицы — пропускаем
+
+      const cityFallback = !colMap.city ? sheet.name : null; // формат собственного экспорта: город = имя листа
+
+      for(let rIdx=headerRowIdx+1; rIdx<=sheet.rowCount; rIdx++){
+        const row = sheet.getRow(rIdx);
+        const model = colMap.model ? String(row.getCell(colMap.model).value || '').trim() : '';
+        let color = colMap.color ? String(row.getCell(colMap.color).value || '').trim() : '';
+        let size = colMap.size ? String(row.getCell(colMap.size).value || '').trim() : '';
+        let city = colMap.city ? String(row.getCell(colMap.city).value || '').trim() : (cityFallback || '');
+        const qty = parseInt(row.getCell(colMap.qty).value);
+
+        // формат собственного экспорта хранит "Цвет / Размер" в одной колонке
+        if(!colMap.size && color.includes('/')){
+          const parts = color.split('/');
+          color = parts[0].trim();
+          size = parts.slice(1).join('/').trim();
+        }
+
+        if(!model || !city || !qty || qty <= 0){
+          if(model || color || city) skipped++;
+          continue;
+        }
+
+        if(!cities.includes(city)) cities.push(city);
+        if(size && !sizes.includes(size)) sizes.push(size);
+
+        const existing = items.find(it=>it.model===model && it.color===color && it.size===size && it.city===city);
+        if(existing) existing.qty += qty;
+        else items.push({ id: uid(), model, color, size, qty, city });
+        imported++;
+      }
+    });
+
+    save(LS.items, items);
+    save(LS.cities, cities);
+    save(LS.sizes, sizes);
+    renderItemsTable(); renderCities(); renderSizeChips(); renderSizeSelect(); renderSmallSizeGrid(); updateDatalists();
+    logHistory('import', `Импорт из Excel: добавлено/обновлено ${imported}, пропущено ${skipped}`);
+    toast(imported ? `Импортировано: ${imported}${skipped? `, пропущено: ${skipped}`:''}` : 'Не найдено подходящих строк для импорта');
+  }catch(err){
+    toast('Не удалось прочитать Excel-файл');
+  }
+  e.target.value = '';
+});
+
+/* ------------------- 10. СОХРАНЕНИЕ / ЗАГРУЗКА ПРОЕКТА ------------------- */
+document.getElementById('save-project-btn').onclick = ()=>{
+  const project = { items, cities, sizes, settings, smallSizes, savedAt: new Date().toISOString() };
+  const blob = new Blob([JSON.stringify(project, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'bridge_boxdist_project.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  logHistory('save', 'Проект сохранён в JSON-файл');
+  toast('Проект сохранён');
+};
+
+document.getElementById('load-project-btn').onclick = ()=> document.getElementById('load-project-file').click();
+document.getElementById('load-project-file').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if(!confirm('Загрузка проекта заменит текущий список товаров, города, размеры и настройки. Продолжить?')) { e.target.value=''; return; }
+
+    items = Array.isArray(data.items) ? data.items.filter(it=>it && it.model && it.qty>0) : [];
+    cities = (Array.isArray(data.cities) && data.cities.length) ? data.cities : DEFAULT_CITIES.slice();
+    sizes = (Array.isArray(data.sizes) && data.sizes.length) ? data.sizes : DEFAULT_SIZES.slice();
+    smallSizes = Array.isArray(data.smallSizes) ? data.smallSizes : DEFAULT_SMALL.slice();
+    settings = (data.settings && typeof data.settings === 'object' && data.settings.boxSize > 0)
+      ? { boxSize: data.settings.boxSize, cap: data.settings.cap || data.settings.boxSize, tiny: data.settings.tiny || 10 }
+      : { boxSize:60, cap:65, tiny:10 };
+
+    save(LS.items, items); save(LS.cities, cities); save(LS.sizes, sizes);
+    save(LS.small, smallSizes); save(LS.settings, settings);
+
+    lastResults = null; editingId = null; searchTerm=''; filters={city:'',model:'',size:''}; sortState={col:null,dir:1};
+    document.getElementById('search-input').value = '';
+
+    renderItemsTable(); renderCities(); renderSizeChips(); renderSizeSelect(); renderSmallSizeGrid(); renderSettings(); updateDatalists();
+    renderResults(null);
+    logHistory('load', 'Проект загружен из JSON-файла');
+    toast('Проект загружен');
+  }catch(err){
+    toast('Не удалось прочитать файл проекта');
+  }
+  e.target.value = '';
+});
+
+/* ---------------------------- 12. ИНИЦИАЛИЗАЦИЯ -------------------------- */
+renderSizeSelect();
+renderSizeChips();
+renderCities();
+renderSmallSizeGrid();
+renderSettings();
+renderItemsTable();
+updateDatalists();
+renderHistory();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
